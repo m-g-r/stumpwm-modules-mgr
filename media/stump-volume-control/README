@@ -1,0 +1,75 @@
+Minimalistic amixer-based volume control for the window manager StumpWM
+-----------------------------------------------------------------------
+
+Just support the three volume control keys on many keyboards.
+
+Depends on amixer which is started via RUN-SHELL-COMMAND.
+
+Hacked by Max-Gerd Retzlaff.
+
+
+loading and configuration
+-------------------------
+
+You can automatically load the module by adding this to your
+~/.stumpwm.d/init.lisp:
+
+  (load-module "stump-volume-control")
+
+Then assign the three commands volume-up, volume-down, volume-toggle-mute
+globally to some keys. If your keyboards has got them you can use the
+typical volume control keys:
+
+  (define-key *top-map* (kbd "XF86AudioRaiseVolume") "volume-up")
+  (define-key *top-map* (kbd "XF86AudioLowerVolume") "volume-down")
+  (define-key *top-map* (kbd "XF86AudioMute") "volume-toggle-mute")
+
+But you have to add it yourself to your ~/.stumpwm.d/init.lisp as I consider
+it bad manners to define global keys in a module.
+
+
+selecting the sound card
+------------------------
+
+If you do not want to control the sound card that ALSA considers your
+first one (that is, sound card number 0, the default), just alter the
+value of the exported variable STUMP-VOLUME-CONTROL:*SOUND-CARD*. For
+example, by adding to your ~/.stumpwm.d/init.lisp:
+
+  (setf stump-volume-control:*sound-card* 1)
+
+Set to NIL to not select any specific sound card explicitly by adding
+to your ~/.stumpwm.d/init.lisp instead:
+
+  (setf stump-volume-control:*sound-card* nil)
+
+
+PulseAudio compatibility
+------------------------
+
+This minimalistic volume control module works mainly for ALSA as it uses
+amixer, the "command-line mixer for [the] ALSA sound card driver".
+It might work also for PulseAudio as there are compatibility layers
+but there might be some shortcomings.
+
+Here is a little workaround to address one problem that was observed:
+PulseAudio mutes more than it unmutes. This module includes hack that
+will explicitly unmute the audio outputs when toggling audio back on.
+It can be controlled by altering the list stored in the exported
+variable STUMP-VOLUME-CONTROL:*PULSE-AUDIO-UNMUTE-OUTPUTS*. By default,
+it is set to '("Speaker" "Headphone") as "Speaker" and "Headphone" are
+the generic output names.
+
+If your hardware uses special names, such as, for example, "Megaphone"
+and "Leslie speaker", add this to your ~/.stumpwm.d/init.lisp:
+
+  (setf stump-volume-control:*pulse-audio-unmute-outputs*
+        '("Megaphone" "Leslie speaker"))
+
+Change to NIL if you just use ALSA and do not want the extra calls to
+be executed (which will fail silently if you do not have the outputs),
+by adding to your  ~/.stumpwm.d/init.lisp instead:
+
+  (setf stump-volume-control:*pulse-audio-unmute-outputs* nil)
+
+(And now I have again spend more time on the dreaded PulseAudio...)
