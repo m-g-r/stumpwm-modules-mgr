@@ -65,43 +65,47 @@
                        (sb-ext:process-status process)
                        (sb-ext:process-pid process)))))
 
+(defvar *radio-start/stop-mutex* (sb-thread:make-mutex :name "stump-radio start/stop mutex"))
+
 (defcommand radio-start () ()
   "start radio if not running"
-  (assert-stations)
-  (if (radio-running-p)
-      (message "Warning: radio already running, not starting.")
-      (destructuring-bind (name . url)
-          (car *stations*)
-        (message (format nil "Starting ~a radio..." name))
-        (setf *sent-termination-signal* nil
-              *radio*
-              (sb-ext:run-program "mplayer" (list url)
-                                  :search t
-                                  :wait nil
-                                  :status-hook #'radio-status-change)))))
+  (sb-thread:with-mutex (*radio-start/stop-mutex* :wait-p nil)
+    (assert-stations)
+    (if (radio-running-p)
+        (message "Warning: radio already running, not starting.")
+        (destructuring-bind (name . url)
+            (car *stations*)
+          (message (format nil "Starting ~a radio..." name))d
+          (setf *sent-termination-signal* nil
+                *radio*
+                (sb-ext:run-program "mplayer" (list url)
+                                    :search t
+                                    :wait nil
+                                    :status-hook #'radio-status-change))))))
 
 (defcommand radio-stop () ()
   "stop radio if running"
-  (if (not (radio-running-p))
-      (message "Warning: radio not running, not stopping.")
-      (progn
-        (message "Stopping radio...")
-        (setf *sent-termination-signal* t)
-        (sb-ext:process-kill *radio* 15) ;; SIGTERM
+  (sb-thread:with-mutex (*radio-start/stop-mutex* :wait-p nil)
+    (if (not (radio-running-p))
+        (message "Warning: radio not running, not stopping.")
+        (progn
+          (message "Stopping radio...")
+          (setf *sent-termination-signal* t)
+          (sb-ext:process-kill *radio* 15) ;; SIGTERM
 
-        ;; kludge to make RADIO-STOP wait for up to 1 s, hoping that
-        ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.
-        ;; Usually, this should spin for just one iteration (.05 s)
-        ;; but it should prevent a late status change message
-        ;; for RADIO-NEXT-STATION and RADIO-PREVIOUS-STATION.
-        (when (eq :failed (loop
-                             for i from 1
-                             while *radio*
-                             do (sleep .05)
-                             when (>= i 20)
-                             return :failed))
-          (message "Warning: Waited for radio to stop but stopped waiting after 1 s.")
-          (setf *radio* nil)))))
+          ;; kludge to make RADIO-STOP wait for up to 1 s, hoping that
+          ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.
+          ;; Usually, this should spin for just one iteration (.05 s)
+          ;; but it should prevent a late status change message
+          ;; for RADIO-NEXT-STATION and RADIO-PREVIOUS-STATION.
+          (when (eq :failed (loop
+                               for i from 1
+                               while *radio*
+                               do (sleep .05)
+                               when (>= i 20)
+                               return :failed))
+            (message "Warning: Waited for radio to stop but stopped waiting after 1 s.")
+            (setf *radio* nil))))))
 
 (defcommand radio-toggle-playback () ()
   "stop radio if running and start playing if not"
