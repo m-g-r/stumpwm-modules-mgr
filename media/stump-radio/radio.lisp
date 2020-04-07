@@ -54,10 +54,14 @@
   our own intentional process termination")
 
 (defun radio-status-change (process)
-  (message (if (and (eq (sb-ext:process-status process) :exited)
-                    *sent-termination-signal*)
-               "Radio stopped."
-               (format nil "Radio status changed to ~a.~%(Process ID: ~a)"
+  (if (and (eq (sb-ext:process-status process) :exited)
+           *sent-termination-signal*)
+      ;; intentional process termination by us
+      (progn
+        (message "Radio stopped.")
+        (setf *radio* nil))
+      ;; unknown signal
+      (message (format nil "Radio status changed to ~a.~%(Process ID: ~a)"
                        (sb-ext:process-status process)
                        (sb-ext:process-pid process)))))
 
@@ -75,6 +79,7 @@
                                   :search t
                                   :wait nil
                                   :status-hook #'radio-status-change)))))
+
 (defcommand radio-stop () ()
   "stop radio if running"
   (if (not (radio-running-p))
@@ -83,7 +88,20 @@
         (message "Stopping radio...")
         (setf *sent-termination-signal* t)
         (sb-ext:process-kill *radio* 15) ;; SIGTERM
-        (setf *radio* nil))))
+
+        ;; kludge to make RADIO-STOP wait for up to 1 s, hoping that
+        ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.
+        ;; Usually, this should spin for just one iteration (.05 s)
+        ;; but it should prevent a late status change message
+        ;; for RADIO-NEXT-STATION and RADIO-PREVIOUS-STATION.
+        (when (eq :failed (loop
+                             for i from 1
+                             while *radio*
+                             do (sleep .05)
+                             when (>= i 20)
+                             return :failed))
+          (message "Warning: Waited for radio to stop but stopped waiting after 1 s.")
+          (setf *radio* nil)))))
 
 (defcommand radio-toggle-playback () ()
   "stop radio if running and start playing if not"
