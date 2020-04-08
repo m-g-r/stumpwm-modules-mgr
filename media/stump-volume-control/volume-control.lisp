@@ -6,18 +6,22 @@
   if it is a number it will be translated to the string \"hw:0\",
   if NIL don't send any device at all.
 
-  Alternatively, you can specify a list of multiple audio devices,
-  andin that case it is also possible to name a custom control for
-  each device by specifying a list (<audio-device> <control-name>) as
-  an entry. If no custom control name is given, \"Master\" is assumed.
+  Alternatively, you can specify a list of multiple audio devices:
+    '(0 \"default\")
+
+  And if you set it to a list, it is also possible to name a custom
+  control for each device by specifying entries as lists of the form:
+    '(<audio-device> control-name>)
+  If no custom control name is given, it defaults to \"Master\".
 
   Example values are:
     0
     '(0 1)
+    '(0 \"default\")
     '(0 (1 \"Speakter\"))
     '((0 \"Master\") (1 \"Speakter\")
 
-  Note that the non-list value is only for backward compatibility.
+  Warning: the non-list variant is only for backward compatibility.
   If you want to specify a single audio device but with a custom
   control name, you still have to enclose this single audio device
   in a list like this:
