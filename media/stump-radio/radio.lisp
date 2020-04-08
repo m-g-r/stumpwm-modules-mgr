@@ -76,11 +76,6 @@
 
 (defun radio-status-change (process)
   (dformat *radio-debug-level* "status in~%")
-  (dformat *radio-debug-level* "pid: ~a status: ~a exit code: ~a termination: ~a~%"
-          (sb-ext:process-pid process)
-          (sb-ext:process-status process)
-          (sb-ext:process-exit-code process)
-          *sent-termination-signal*)
   (if (and *sent-termination-signal*
            (exited-or-signaled-termination-p process))
       ;; intentional process termination by us
