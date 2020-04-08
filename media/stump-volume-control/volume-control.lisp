@@ -65,31 +65,31 @@
     (number (format nil "-D hw:~d " device))
     (null "")))
 
-(defun make-amixer-call (command &key (device (get-current-device))
-                                      (control (get-current-control)))
-  (format nil "amixer ~asset ~s ~a"
-          (translate-device-to-option device)
-          control
-          command))
+(defun call-amixer (command &key (device (get-current-device))
+                                 (control (get-current-control))
+                                 collect-output-p)
+  (run-shell-command (format nil "amixer ~asset ~s ~a"
+                             (translate-device-to-option device)
+                             control
+                             command)
+                     collect-output-p))
 
 (defcommand volume-up () ()
-  (run-shell-command (make-amixer-call "playback 2db+"))
+  (call-amixer "playback 2db+")
   (message "Audio bit lowder."))
 
 (defcommand volume-down () ()
-  (run-shell-command (make-amixer-call "playback 2db-"))
+  (call-amixer "playback 2db-")
   (message "Audio bit quieter."))
 
 (defcommand volume-toggle-mute () ()
   (let ((muted (search "[off]"
-                       (run-shell-command
-                        (make-amixer-call "playback toggle")
-                        t))))
+                       (call-amixer "playback toggle" :collect-output-p t))))
     (when (not muted)
       (dolist (output *pulse-audio-unmute-outputs*)
         ;; Just unmute all listed outputs explicitly when going back on.
         ;; Of course, we cannot fix PulseAudio with a small hack here.
-        (run-shell-command (make-amixer-call "playback on" :control output))))
+        (call-amixer "playback on" :control output)))
     (message (if muted
                  "Audio muted."
                  (format nil "Audio back on.~@[~%(Also switched on outputs: ~{~a~^, ~}.)~]"
