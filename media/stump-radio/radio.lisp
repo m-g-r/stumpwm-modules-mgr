@@ -51,7 +51,7 @@
   (See also RADIO-STOP.)")
 
 (defvar *radio-debug-level* 5
-  "debug level for stump-radio")
+  "debug level for stump-radio debugging")
 
 (defun exited-or-signaled-termination-p (process)
   "If a process handled SIGTERM correctly it should terminate normally
@@ -75,7 +75,6 @@
   our own intentional process termination")
 
 (defun radio-status-change (process)
-  (dformat *radio-debug-level* "status in~%")
   (if (and *sent-termination-signal*
            (exited-or-signaled-termination-p process))
       ;; intentional process termination by us detected -> handle
@@ -85,8 +84,7 @@
       ;; unknown signal -> show it
       (message (format nil "Radio status changed to ~a.~%(Process ID: ~a)"
                        (sb-ext:process-status process)
-                       (sb-ext:process-pid process))))
-  (dformat *radio-debug-level* "status out~%"))
+                       (sb-ext:process-pid process)))))
 
 (defvar *radio-start/stop-mutex* (sb-thread:make-mutex :name "stump-radio start/stop mutex")
   "mutex to ensure that no calls to RADIO-START and RADIO-STOP overlap")
@@ -94,7 +92,6 @@
 (defcommand radio-start () ()
   "start radio if not running"
   (sb-thread:with-mutex (*radio-start/stop-mutex* :wait-p nil)
-    (dformat *radio-debug-level* "start in~%")
     (assert-stations)
     (if (radio-running-p)
         (message "Warning: radio already running, not starting.")
@@ -106,13 +103,11 @@
                 (sb-ext:run-program "mplayer" (list url)
                                     :search t
                                     :wait nil
-                                    :status-hook #'radio-status-change))))
-    (dformat *radio-debug-level* "start out~%")))
+                                    :status-hook #'radio-status-change))))))
 
 (defcommand radio-stop () ()
   "stop radio if running"
   (sb-thread:with-mutex (*radio-start/stop-mutex* :wait-p nil)
-    (dformat *radio-debug-level* "stop in~%")
     (if (not (radio-running-p))
         (message "Warning: radio not running, not stopping.")
         (progn
@@ -156,7 +151,8 @@
                                for i from 1
                                while *radio*
                                do (progn (sleep wait)
-                                         (dformat *radio-debug-level* "RADIO-STOP waiting ~,3f s already~%" (* i wait)))
+                                         (dformat *radio-debug-level*
+                                                  "RADIO-STOP waiting ~,3f s already~%" (* i wait)))
                                when (>= i max-i)
                                return :failed))
             ;; Waiting might still fail, for example, when someone manually sent
@@ -168,8 +164,7 @@
             ;; (to status :signaled).
             ;; All that is okay. We don't want to mess with manually sent signals.
             (message "Warning: Waited for radio to stop but stopped waiting after 5 s.")
-            (setf *radio* nil))))
-    (dformat *radio-debug-level* "stop out~%")))
+            (setf *radio* nil))))))
 
 (defcommand radio-toggle-playback () ()
   "stop radio if running and start playing if not"
@@ -181,7 +176,7 @@
   "stop current radio and start playing again
   (use for network problems or after suspend)"
   (radio-stop)
-  (dformat *radio-debug-level* "between stop and start~%~%")
+  (dformat *radio-debug-level* "RADIO-FORCE-RESTART between stop and start~%")
   (radio-start))
 
 (defcommand radio-next-station () ()
