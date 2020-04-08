@@ -66,8 +66,8 @@
 
 (defun radio-running-p ()
   (and *radio*
-       ;; don't test for :running as this is not binary logic and
-       ;; the process might also be in :stopped,:signaled, or :exited
+       ;; don't test simply for :running as this is not binary logic and
+       ;; the process might also be in :stopped, :signaled, or :exited
        (not (exited-or-signaled-termination-p *radio*))))
 
 (defvar *sent-termination-signal* nil
