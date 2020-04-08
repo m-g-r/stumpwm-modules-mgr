@@ -43,10 +43,16 @@
   "holds the process structure of mplayer when a radio is running (or at least we think it is running),
   NIL if not playing anything (as it was not yet ever playing or we properly shut it down)")
 
+(defvar *mplayer-termination-signal* sb-unix:sigterm
+  "Usually, we terminate mplayer with SIGTERM. If you absolutely want
+  instant switching of stations and do not care about letting mplayer
+  perperly self-terminate, set the variable to SIGKILL instead:
+    (setf *mplayer-termination-signal* sb-unix:sigkill)")
+
 (defvar *radio-debug-level* 5
   "debug level for stump-radio")
 
-(defun exited-or-signaled-sigterm-p (process)
+(defun exited-or-signaled-termination-p (process)
   "If a process handled SIGTERM correctly it should terminate normally
   which results in process-status :exited.
   But if it was signaled too early it could not yet handle the signal
@@ -55,13 +61,13 @@
   as its exit-code."
   (or (eq :exited (sb-ext:process-status process))
       (and (eq :signaled (sb-ext:process-status process))
-           (= sb-unix:sigterm (sb-ext:process-exit-code process)))))
+           (= *mplayer-termination-signal* (sb-ext:process-exit-code process)))))
 
 (defun radio-running-p ()
   (and *radio*
        ;; don't test for :running, as this is not binary logic and
        ;; the process might also be in :stopped,:signaled, or :exited
-       (not (exited-or-signaled-sigterm-p *radio*))))
+       (not (exited-or-signaled-termination-p *radio*))))
 
 (defvar *sent-termination-signal* nil
   "used to detect that a status change to :exited was caused by
@@ -75,7 +81,7 @@
           (sb-ext:process-exit-code process)
           *sent-termination-signal*)
   (if (and *sent-termination-signal*
-           (exited-or-signaled-sigterm-p process))
+           (exited-or-signaled-termination-p process))
       ;; intentional process termination by us
       (progn
         (message "Radio stopped.")
@@ -116,7 +122,7 @@
         (progn
           (message "Stopping radio...")
           (setf *sent-termination-signal* t)
-          (sb-ext:process-kill *radio* sb-unix:sigterm)
+          (sb-ext:process-kill *radio* *mplayer-termination-signal*)
 
           ;; kludge to make RADIO-STOP wait for up to 5 s, hoping that
           ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.
@@ -134,10 +140,9 @@
           ;; afterwards.
           ;; It does not happen when it receives the SIGTERM right away as then
           ;; then the process is terminated by the signal itself which is fast
-          ;; (see EXITED-OR-SIGNALED-SIGTERM-P).
+          ;; (see EXITED-OR-SIGNALED-TERMINATION-P).
           ;;
-          ;; We could sent SIGKILL instead which would be faster but not nice.
-          ;; If mplayer needs longer to tidily self-terminate that's how it is.
+          ;; See also *MPLAYER-TERMINATION-SIGNAL* if you do not want to wait.
           (when (eq :failed (loop
                                with wait = .05
                                with max-i = 100
