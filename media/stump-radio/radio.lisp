@@ -58,15 +58,15 @@
   which results in process-status :exited.
   But if it was signaled too early it could not yet handle the signal
   and thus it is terminated by the signal itself. In that case, the
-  resulting process-status is :signaled and with the causing signal
-  as its exit-code."
+  resulting process-status is :signaled with the causing signal as
+  exit-code."
   (or (eq :exited (sb-ext:process-status process))
       (and (eq :signaled (sb-ext:process-status process))
            (= *mplayer-termination-signal* (sb-ext:process-exit-code process)))))
 
 (defun radio-running-p ()
   (and *radio*
-       ;; don't test for :running, as this is not binary logic and
+       ;; don't test for :running as this is not binary logic and
        ;; the process might also be in :stopped,:signaled, or :exited
        (not (exited-or-signaled-termination-p *radio*))))
 
@@ -78,11 +78,11 @@
   (dformat *radio-debug-level* "status in~%")
   (if (and *sent-termination-signal*
            (exited-or-signaled-termination-p process))
-      ;; intentional process termination by us
+      ;; intentional process termination by us detected -> handle
       (progn
         (message "Radio stopped.")
         (setf *radio* nil))
-      ;; unknown signal
+      ;; unknown signal -> show it
       (message (format nil "Radio status changed to ~a.~%(Process ID: ~a)"
                        (sb-ext:process-status process)
                        (sb-ext:process-pid process))))
@@ -159,13 +159,13 @@
                                          (dformat *radio-debug-level* "RADIO-STOP waiting ~,3f s already~%" (* i wait)))
                                when (>= i max-i)
                                return :failed))
-            ;; This still might happen, for example, when someone manually sent
+            ;; Waiting might still fail, for example, when someone manually sent
             ;; a SIGSTOP. In that case, the process will be :stopped and stays that way.
             ;; After the timeout, stump-radio forgets about it. But even then, the
             ;; SIGTERM was sent already, so when someone sends a SIGCONT, the process
-            ;; right away handles the old SIGTERM and terminats (to status :exited).
-            ;; And when a SIGKILL was sent, it will terminate right away (to status
-            ;; :signaled).
+            ;; right away handles the old SIGTERM and terminates (to status :exited).
+            ;; And when a SIGKILL was sent, the process will be terminated right away
+            ;; (to status :signaled).
             ;; All that is okay. We don't want to mess with manually sent signals.
             (message "Warning: Waited for radio to stop but stopped waiting after 5 s.")
             (setf *radio* nil))))
