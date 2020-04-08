@@ -1,21 +1,25 @@
 (in-package :stump-volume-control)
 
-(defvar *sound-cards* '(0)
+(defvar *sound-card* 0
   "audio device to control by amixer; string, number, or null.
   If it is a string, it will be used as a device name as it is,
   if it is a number it will be translated to the string \"hw:0\",
   if NIL don't send any device at all.")
-#+nil (setf *sound-cards* '(0 (1 "Speaker")))
+#+nil (setf *sound-card* '(0 (1 "Speaker")))
 
 (defvar *index-of-current-sound-card* 0)
 
 (defun switch-sound-card ()
   (setf *index-of-current-sound-card*
-        (mod (1+ *index-of-current-sound-card*)
-             (length *sound-cards*))))
+        (if (consp *sound-card*)
+            (mod (1+ *index-of-current-sound-card*)
+                 (length *sound-card*))
+            0)))
 
 (defun get-current-sound-card ()
-  (nth *index-of-current-sound-card* *sound-cards*))
+  (if (consp *sound-card*)
+      (nth *index-of-current-sound-card* *sound-card*)
+      *sound-card*))
 
 (defun get-current-device (&optional (sound-card (get-current-sound-card)))
   (if (consp sound-card)
@@ -39,7 +43,7 @@
   be executed (which will fail silently if you do not have the outputs).")
 
 (defun translate-device-to-option (device)
-  "see docstring of *sound-cards*"
+  "see docstring of *sound-card*"
   (etypecase device
     (string (format nil "-D ~a " device))
     (number (format nil "-D hw:~d " device))
