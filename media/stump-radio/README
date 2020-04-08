@@ -39,7 +39,7 @@ radio stations
 --------------
 
 The list of radio stations is stored in an internal list of the module.
-The default stations are Le DJAM radio (Paris, France), FluxFM (Berin,
+The default stations are Le DJAM radio (Paris, France), FluxFM (Berlin,
 Germany), and 1 Live (Cologne, Germany).
 
 You can add a station with a call like like:
@@ -82,7 +82,7 @@ might take a bit when mplayer already does some network requests,
 as it will handle the SIGTERM only afterwards.
 
 If you absolutely want instant switching of stations and do not care
-about letting mplayer perperly self-terminate, alter the variable
+about letting mplayer properly self-terminate, alter the variable
 STUMP-RADIO:*MPLAYER-TERMINATION-SIGNAL* from SIGTERM to SIGKILL by
 adding to your StumpWM init file:
 
