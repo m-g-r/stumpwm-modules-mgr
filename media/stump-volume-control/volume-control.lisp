@@ -11,7 +11,7 @@
 
   And if you set it to a list, it is also possible to name a custom
   control for each device by specifying entries as lists of the form:
-    '(<audio-device> control-name>)
+    '(<audio-device> <control-name>)
   If no custom control name is given, it defaults to \"Master\".
 
   Example values are:
