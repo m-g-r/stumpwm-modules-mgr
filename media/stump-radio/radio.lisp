@@ -119,14 +119,10 @@
     (dformat *radio-debug-level* "stop in~%")
     (if (not (radio-running-p))
         (message "Warning: radio not running, not stopping.")
-        (let ((old-pid (sb-ext:process-pid *radio*)))
+        (progn
           (message "Stopping radio...")
           (setf *sent-termination-signal* t)
-          (let ((ret (sb-ext:process-kill *radio* *mplayer-termination-signal*)))
-            (dformat *radio-debug-level* "sending signal ~a to process ~a returned ~a~%"
-                     *mplayer-termination-signal*
-                     (sb-ext:process-pid *radio*)
-                     ret))
+          (sb-ext:process-kill *radio* *mplayer-termination-signal* :PROCESS-GROUP)
 
           ;; kludge to make RADIO-STOP wait for up to 5 s, hoping that
           ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.
@@ -164,12 +160,7 @@
             ;; And when a SIGKILL it will terminate right away (to status :signaled).
             ;; All that is okay. We don't want to mess with manually sent signals.
             (message "Warning: Waited for radio to stop but stopped waiting after 5 s.")
-            (setf *radio* nil))
-          (let ((ret (sb-unix:unix-kill old-pid *mplayer-termination-signal*)))
-            (dformat *radio-debug-level* "sending signal ~a to process ~a returned ~a AGAIN~%"
-                     *mplayer-termination-signal*
-                     old-pid
-                     ret))))
+            (setf *radio* nil))))
     (dformat *radio-debug-level* "stop out~%")))
 
 (defcommand radio-toggle-playback () ()
