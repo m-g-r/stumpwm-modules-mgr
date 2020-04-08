@@ -47,7 +47,8 @@
   "Usually, we terminate mplayer with SIGTERM. If you absolutely want
   instant switching of stations and do not care about letting mplayer
   perperly self-terminate, set the variable to SIGKILL instead:
-    (setf *mplayer-termination-signal* sb-unix:sigkill)")
+    (setf *mplayer-termination-signal* sb-unix:sigkill)
+  (See also RADIO-STOP.)")
 
 (defvar *radio-debug-level* 5
   "debug level for stump-radio")
@@ -132,12 +133,12 @@
           ;; would be irritating for the user.
           ;;
           ;; When I multiple times hit the key that executes RADIO-NEXT-STATION
-          ;; but with small delays in between. In many tests I could get the wait
+          ;; but with small delays in between, in many tests I could get the wait
           ;; time up to 2.45 s on my system.
           ;; It seems to happen when mplayer ran long enough to start trying
-          ;; to connect to the network already. If it receives SIGTERM then
-          ;; it will first wait for the network requests and only terminate
-          ;; afterwards.
+          ;; to connect to the network already. If it receives SIGTERM then,
+          ;; it will first wait for the network requests to finsh and only
+          ;; terminate afterwards.
           ;; It does not happen when it receives the SIGTERM right away as then
           ;; then the process is terminated by the signal itself which is fast
           ;; (see EXITED-OR-SIGNALED-TERMINATION-P).
@@ -153,11 +154,12 @@
                                when (>= i max-i)
                                return :failed))
             ;; This still might happen, for example, when someone manually sent
-            ;; a SIGSTOP. In that case, the process will be stopped and stays that way.
+            ;; a SIGSTOP. In that case, the process will be :stopped and stays that way.
             ;; After the timeout, stump-radio forgets about it. But even then, the
             ;; SIGTERM was sent already, so when someone sends a SIGCONT, the process
             ;; right away handles the old SIGTERM and terminats (to status :exited).
-            ;; And when a SIGKILL it will terminate right away (to status :signaled).
+            ;; And when a SIGKILL was sent, it will terminate right away (to status
+            ;; :signaled).
             ;; All that is okay. We don't want to mess with manually sent signals.
             (message "Warning: Waited for radio to stop but stopped waiting after 5 s.")
             (setf *radio* nil))))
