@@ -53,6 +53,65 @@
 (defvar *radio-debug-level* 5
   "debug level for stump-radio debugging")
 
+(defvar *sent-termination-signal* nil
+  "used to detect that a status change to :exited was caused by
+  our own intentional process termination")
+
+(defun terminate-radio-and-wait ()
+  (setf *sent-termination-signal* t)
+  (sb-ext:process-kill *radio* *mplayer-termination-signal*
+                       (if (= sb-unix:sigkill *mplayer-termination-signal*)
+                           ;; For some streams mplayer might spawn child
+                           ;; processes (for example, in case of redirects),
+                           ;; so we need to send the signal to whole process
+                           ;; group for SIGKILL, as this signal this prevents
+                           ;; the process from proper handling the signal itself:
+                           :process-group
+                           ;; For other signals trust that the process knows
+                           ;; best how to handle it and what to do with its
+                           ;; child processes:
+                           :pid))
+
+  ;; kludge to make RADIO-STOP wait for up to 5 s, hoping that
+  ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.
+  ;; Usually, this should spin for just one iteration (.05 s)
+  ;; but it should prevent a late status change message
+  ;; for RADIO-NEXT-STATION and RADIO-PREVIOUS-STATION which
+  ;; would be irritating for the user.
+  ;;
+  ;; When I multiple times hit the key that executes RADIO-NEXT-STATION
+  ;; but with small delays in between, in many tests I could get the wait
+  ;; time up to 2.45 s on my system.
+  ;; It seems to happen when mplayer ran long enough to start trying
+  ;; to connect to the network already. If it receives SIGTERM then,
+  ;; it will first wait for the network requests to finsh and only
+  ;; terminate afterwards.
+  ;; It does not happen when it receives the SIGTERM right away as then
+  ;; then the process is terminated by the signal itself which is fast
+  ;; (see EXITED-OR-SIGNALED-TERMINATION-P).
+  ;;
+  ;; See also *MPLAYER-TERMINATION-SIGNAL* if you do not want to wait.
+  (when (eq :failed (loop
+                       with wait = .05
+                       with max-i = 100
+                       for i from 1
+                       while *radio*
+                       do (progn (sleep wait)
+                                 (dformat *radio-debug-level*
+                                          "RADIO-STOP waiting ~,3f s already~%" (* i wait)))
+                       when (>= i max-i)
+                       return :failed))
+    ;; Waiting might still fail, for example, when someone manually sent
+    ;; a SIGSTOP. In that case, the process will be :stopped and stays that way.
+    ;; After the timeout, stump-radio forgets about it. But even then, the
+    ;; SIGTERM was sent already, so when someone sends a SIGCONT, the process
+    ;; right away handles the old SIGTERM and terminates (to status :exited).
+    ;; And when a SIGKILL was sent, the process will be terminated right away
+    ;; (to status :signaled).
+    ;; All that is okay. We don't want to mess with manually sent signals.
+    (message "Warning: Waited for radio to stop but stopped waiting after 5 s.")
+    (setf *radio* nil)))
+
 (defun exited-or-signaled-termination-p (process)
   "If a process handled SIGTERM correctly it should terminate normally
   which results in process-status :exited.
@@ -69,10 +128,6 @@
        ;; don't test simply for :running as this is not binary logic and
        ;; the process might also be in :stopped, :signaled, or :exited
        (not (exited-or-signaled-termination-p *radio*))))
-
-(defvar *sent-termination-signal* nil
-  "used to detect that a status change to :exited was caused by
-  our own intentional process termination")
 
 (defun radio-status-change (process)
   (if (and *sent-termination-signal*
@@ -99,11 +154,10 @@
             (car *stations*)
           (message (format nil "Starting ~a radio..." name))
           (setf *sent-termination-signal* nil
-                *radio*
-                (sb-ext:run-program "mplayer" (list url)
-                                    :search t
-                                    :wait nil
-                                    :status-hook #'radio-status-change))))))
+                *radio* (sb-ext:run-program "mplayer" (list url)
+                                            :search t
+                                            :wait nil
+                                            :status-hook #'radio-status-change))))))
 
 (defcommand radio-stop () ()
   "stop radio if running"
@@ -112,59 +166,7 @@
         (message "Warning: radio not running, not stopping.")
         (progn
           (message "Stopping radio...")
-          (setf *sent-termination-signal* t)
-          (sb-ext:process-kill *radio* *mplayer-termination-signal*
-                               (if (= sb-unix:sigkill *mplayer-termination-signal*)
-                                   ;; For some streams mplayer might spawn child
-                                   ;; processes (for example, in case of redirects),
-                                   ;; so we need to send the signal to whole process
-                                   ;; group for SIGKILL, as this signal this prevents
-                                   ;; the process from proper handling the signal itself:
-                                   :process-group
-                                   ;; For other signals trust that the process knows
-                                   ;; best how to handle it and what to do with its
-                                   ;; child processes:
-                                   :pid))
-
-          ;; kludge to make RADIO-STOP wait for up to 5 s, hoping that
-          ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.
-          ;; Usually, this should spin for just one iteration (.05 s)
-          ;; but it should prevent a late status change message
-          ;; for RADIO-NEXT-STATION and RADIO-PREVIOUS-STATION which
-          ;; would be irritating for the user.
-          ;;
-          ;; When I multiple times hit the key that executes RADIO-NEXT-STATION
-          ;; but with small delays in between, in many tests I could get the wait
-          ;; time up to 2.45 s on my system.
-          ;; It seems to happen when mplayer ran long enough to start trying
-          ;; to connect to the network already. If it receives SIGTERM then,
-          ;; it will first wait for the network requests to finsh and only
-          ;; terminate afterwards.
-          ;; It does not happen when it receives the SIGTERM right away as then
-          ;; then the process is terminated by the signal itself which is fast
-          ;; (see EXITED-OR-SIGNALED-TERMINATION-P).
-          ;;
-          ;; See also *MPLAYER-TERMINATION-SIGNAL* if you do not want to wait.
-          (when (eq :failed (loop
-                               with wait = .05
-                               with max-i = 100
-                               for i from 1
-                               while *radio*
-                               do (progn (sleep wait)
-                                         (dformat *radio-debug-level*
-                                                  "RADIO-STOP waiting ~,3f s already~%" (* i wait)))
-                               when (>= i max-i)
-                               return :failed))
-            ;; Waiting might still fail, for example, when someone manually sent
-            ;; a SIGSTOP. In that case, the process will be :stopped and stays that way.
-            ;; After the timeout, stump-radio forgets about it. But even then, the
-            ;; SIGTERM was sent already, so when someone sends a SIGCONT, the process
-            ;; right away handles the old SIGTERM and terminates (to status :exited).
-            ;; And when a SIGKILL was sent, the process will be terminated right away
-            ;; (to status :signaled).
-            ;; All that is okay. We don't want to mess with manually sent signals.
-            (message "Warning: Waited for radio to stop but stopped waiting after 5 s.")
-            (setf *radio* nil))))))
+          (terminate-radio-and-wait)))))
 
 (defcommand radio-toggle-playback () ()
   "stop radio if running and start playing if not"
