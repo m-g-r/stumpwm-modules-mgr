@@ -119,10 +119,17 @@
           (message "Stopping radio...")
           (setf *sent-termination-signal* t)
           (sb-ext:process-kill *radio* *mplayer-termination-signal*
-                               ;; for some streams mplayer might spawn child
-                               ;; processes, so we need to send the signal to
-                               ;; whole process group (at least for SIGKILL):
-                               :PROCESS-GROUP)
+                               (if (= sb-unix:sigkill *mplayer-termination-signal*)
+                                   ;; For some streams mplayer might spawn child
+                                   ;; processes (for example, in case of redirects),
+                                   ;; so we need to send the signal to whole process
+                                   ;; group for SIGKILL, as this signal this prevents
+                                   ;; the process from proper handling the signal itself:
+                                   :process-group
+                                   ;; For other signals trust that the process knows
+                                   ;; best how to handle it and what to do with its
+                                   ;; child processes:
+                                   :pid))
 
           ;; kludge to make RADIO-STOP wait for up to 5 s, hoping that
           ;; the SIGTERM was handled by then and RADIO-STATUS-CHANGE ran.

@@ -88,6 +88,9 @@ adding to your StumpWM init file:
 
   (setf *mplayer-termination-signal* sb-unix:sigkill)
 
-Note that it is not proper to terminate a process by SIGKILL.
+Note that it is not proper to terminate a process by SIGKILL. Probably
+no kittens will die in this case of mplayer streaming some music but
+be warned.
 
-(You think "Let's keep this simple!" but then there is POSIX and suddenly...)
+(You think "Let's keep this simple!" but then there is POSIX and signaling,
+ and suddenly...)
