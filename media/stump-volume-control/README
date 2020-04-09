@@ -67,6 +67,7 @@ And if you set it to a list, it is also possible to name a custom
 control for each device by specifying entries as lists of the form:
   '(<audio-device> <control-name>)
 If no custom control name is given, it defaults to "Master".
+The first entry is considered to be the default sound card.
 
 On my system, I have a second sound card that appears when I put
 my notebook on its docking station. It has no "Master" control
@@ -91,8 +92,8 @@ in a list like this:
 PulseAudio compatibility
 ------------------------
 
-This minimalistic volume control module works mainly for ALSA as it uses
-amixer, the "command-line mixer for [the] ALSA sound card driver".
+This minimalistic volume control module works mainly for ALSA as it
+uses amixer, the "command-line mixer for [the] ALSA sound card driver".
 It might work also for PulseAudio as there are compatibility layers
 but there might be some shortcomings.
 

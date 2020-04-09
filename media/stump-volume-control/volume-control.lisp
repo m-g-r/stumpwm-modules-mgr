@@ -13,6 +13,7 @@
   control for each device by specifying entries as lists of the form:
     '(<audio-device> <control-name>)
   If no custom control name is given, it defaults to \"Master\".
+  The first entry is considered to be the default sound card.
 
   Example values are:
     0
@@ -27,7 +28,19 @@
   in a list like this:
     '((0 \"Master\"))")
 
-(defvar *index-of-current-sound-card* 0)
+(defvar *pulse-audio-unmute-outputs* '("Speaker" "Headphone")
+  "PulseAudio mutes more than it unmutes; when this variable is set,
+  the listed audio outputs will explicitly be unmuted when toggling
+  audio back on.
+
+  \"Speaker\" and \"Headphone\" are the generic output names but
+  some hardware might expose special names.
+
+  Change to NIL if you just use ALSA and do not want the extra calls to
+  be executed (which will fail silently if you do not have the outputs).")
+
+(defvar *index-of-current-sound-card* 0
+  "index of sound card selected")
 
 (defun switch-sound-card ()
   (setf *index-of-current-sound-card*
@@ -50,17 +63,6 @@
   (if (consp sound-card)
       (second sound-card)
       "Master"))
-
-(defvar *pulse-audio-unmute-outputs* '("Speaker" "Headphone")
-  "PulseAudio mutes more than it unmutes; when this variable is set,
-  the listed audio outputs will explicitly be unmuted when toggling
-  audio back on.
-
-  \"Speaker\" and \"Headphone\" are the generic output names but
-  some hardware might expose special names.
-
-  Change to NIL if you just use ALSA and do not want the extra calls to
-  be executed (which will fail silently if you do not have the outputs).")
 
 (defun translate-device-to-option (device)
   "see docstring of *sound-card*"
