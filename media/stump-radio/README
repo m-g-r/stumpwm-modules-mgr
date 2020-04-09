@@ -39,7 +39,7 @@ radio stations
 --------------
 
 The list of radio stations is stored in an internal list of the module.
-The default stations are Le DJAM radio (Paris, France), FluxFM (Berin,
+The default stations are Le DJAM radio (Paris, France), FluxFM (Berlin,
 Germany), and 1 Live (Cologne, Germany).
 
 You can add a station with a call like like:
@@ -72,3 +72,25 @@ Here are some more stations to add to your StumpWM init file:
     "https://wdr-1live-djsession.icecastssl.wdr.de/wdr/1live/djsession/mp3/128/stream.mp3")
   (stump-radio:add-station :|1Live Plan B|
     "https://wdr-1live-planb.icecastssl.wdr.de/wdr/1live/planb/mp3/128/stream.mp3")
+
+
+instant channel zapping
+-----------------------
+
+Usually, we terminate mplayer with the POSIX signal SIGTERM. This
+might take a bit when mplayer already does some network requests,
+as it will handle the SIGTERM only afterwards.
+
+If you absolutely want instant switching of stations and do not care
+about letting mplayer properly self-terminate, alter the variable
+STUMP-RADIO:*MPLAYER-TERMINATION-SIGNAL* from SIGTERM to SIGKILL by
+adding to your StumpWM init file:
+
+  (setf *mplayer-termination-signal* sb-unix:sigkill)
+
+Note that it is not proper to terminate a process by SIGKILL. Probably
+no kittens will die in this case of mplayer streaming some music but
+be warned.
+
+(You think "Let's keep this simple!" but then there is POSIX and signaling,
+ and suddenly...)

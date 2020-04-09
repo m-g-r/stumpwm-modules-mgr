@@ -6,4 +6,6 @@
            #:radio-start #:radio-stop #:radio-toggle-playback #:radio-force-restart
            #:radio-next-station #:radio-previous-station #:radio-list-stations
            ;; functions:
-           #:add-station #:remove-station #:list-stations #:clear-stations))
+           #:add-station #:remove-station #:list-stations #:clear-stations
+           ;; variables
+           #:*mplayer-termination-signal*))
