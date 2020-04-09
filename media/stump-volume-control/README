@@ -55,11 +55,45 @@ of pattern "hw:<number>", so these two calls have the same effect:
   (setf stump-volume-control:*sound-card* "hw:1")
 
 
+multiple sound cards and custom controls
+----------------------------------------
+
+To control multiple sound cards, you can alternatively set the variable
+STUMP-VOLUME-CONTROL:*SOUND-CARD* to a list of multiple audio devices:
+
+  (setf stump-volume-control:*sound-card* '(0 "default"))
+
+And if you set it to a list, it is also possible to name a custom
+control for each device by specifying entries as lists of the form:
+  '(<audio-device> <control-name>)
+If no custom control name is given, it defaults to "Master".
+The first entry is considered to be the default sound card.
+
+On my system, I have a second sound card that appears when I put
+my notebook on its docking station. It has no "Master" control
+as most sound cards but instead it is called "Speaker". So I put
+in my StumpWM init file:
+
+  (setf stump-volume-control:*sound-card* '(0 (1 "Speaker")))
+
+The command volume-switch-sound-card switches through the list
+of sound cards. Bind it to a key. I use this in my StumpWM init file:
+
+  (define-key *top-map* (kbd "S-XF86AudioMute") "volume-switch-sound-card")
+
+Warning: the non-list variant is only for backward compatibility.
+If you want to specify a single audio device but with a custom
+control name, you still have to enclose this single audio device
+in a list like this:
+
+    (setf stump-volume-control:*sound-card* '((0 "Master")))
+
+
 PulseAudio compatibility
 ------------------------
 
-This minimalistic volume control module works mainly for ALSA as it uses
-amixer, the "command-line mixer for [the] ALSA sound card driver".
+This minimalistic volume control module works mainly for ALSA as it
+uses amixer, the "command-line mixer for [the] ALSA sound card driver".
 It might work also for PulseAudio as there are compatibility layers
 but there might be some shortcomings.
 
